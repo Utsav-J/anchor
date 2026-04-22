@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "skills": {
+    "dart-best-practices": {
+      "source": "kevmoo/dash_skills",
+      "sourceType": "github",
+      "computedHash": "2566cbf8afb7241892fc626cf6713692e12fad7acdbead07b2a278e403faf996"
+    },
+    "flutter-adding-home-screen-widgets": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "426ebe17469828db1ef6503969b9bc01de09d5c3c9700b0c47bb04682f8cb174"
+    },
+    "flutter-animating-apps": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "217700e356dae9e3624a54543aa366aca3871aa3c0368856156715e211aeac4c"
+    },
+    "flutter-animations": {
+      "source": "madteacher/mad-agents-skills",
+      "sourceType": "github",
+      "computedHash": "0c62d299cfdb82a8a22eadcb9b58c998cb6ceb85368a342689143a0278e4c7bb"
+    },
+    "flutter-architecting-apps": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "8d4c005971a6dc098557a5511cfd683de25aa88cb595c5bc8b306168c35bc7ab"
+    },
+    "flutter-building-forms": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "40c4fe9aae94f3271e63553502d9255158beef25872b5ede0bb8f54603d59558"
+    },
+    "flutter-building-layouts": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "9686218c0b724c42ea30e97a3cc081cf4de69b5f3b0aa6253bd012ce9d573834"
+    },
+    "flutter-caching-data": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "94d264d06725eb88d19f32eb21ba202fbaf887c4ce679ecd99cfd86a83b1748c"
+    },
+    "flutter-expert": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "d260811d0d6d769174e0615ae06e189a67ee04c70e6cf57b19e9096be2d205f1"
+    },
+    "flutter-handling-http-and-json": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "9c57a05e71557b4f8cd3ac9e72b8c65f20e8deaf5c1163a1852dfe4fd654e5c0"
+    },
+    "flutter-implementing-navigation-and-routing": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "eed907fa9e5c26df809d3db2ad80bf736b0956058dc20ba21dad386de677b7a8"
+    },
+    "flutter-improving-accessibility": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "2104011c04e3850af4edbace09f64ccec78fa2a92260500a51a1d52f33acb415"
+    },
+    "flutter-managing-state": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "14b60303535c07f900097f2054613f0835668f202c289b0429446aba28941576"
+    }
+  }
+}
