@@ -3,16 +3,41 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../onboarding_progress.dart';
 import '../../../shared/models/focus_priority.dart';
+import '../../../shared/widgets/liquid_glass_action_button.dart';
 import 'focus_filter_notifier.dart';
 import 'widgets/bubble_canvas.dart';
 import 'widgets/focus_list_panel.dart';
 
-class FocusFilterScreen extends ConsumerWidget {
+class FocusFilterScreen extends ConsumerStatefulWidget {
   const FocusFilterScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FocusFilterScreen> createState() => _FocusFilterScreenState();
+}
+
+class _FocusFilterScreenState extends ConsumerState<FocusFilterScreen> {
+  bool _isContinuing = false;
+
+  Future<void> _continueToQuickies(FocusFilterNotifier notifier) async {
+    if (_isContinuing) return;
+
+    setState(() => _isContinuing = true);
+    await Future<void>.delayed(const Duration(milliseconds: 430));
+
+    final config = await notifier.saveAndComplete();
+    if (!mounted) return;
+
+    ref.read(activeFocusPriorityProvider.notifier).state = config;
+    await OnboardingProgress.saveStage(OnboardingStage.quickies);
+    if (!mounted) return;
+
+    context.go('/onboarding/quickies');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(focusFilterProvider);
     final notifier = ref.read(focusFilterProvider.notifier);
 
@@ -23,14 +48,17 @@ class FocusFilterScreen extends ConsumerWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _FocusHeader(state: state, notifier: notifier),
+                const _FocusHeader(),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     switchInCurve: Curves.easeOut,
                     switchOutCurve: Curves.easeIn,
                     child: state.viewMode == FocusViewMode.bubble
-                        ? const BubbleCanvas(key: ValueKey('bubble'))
+                        ? BubbleCanvas(
+                            key: const ValueKey('bubble'),
+                            isExiting: _isContinuing,
+                          )
                         : const FocusListPanel(key: ValueKey('list')),
                   ),
                 ),
@@ -40,7 +68,12 @@ class FocusFilterScreen extends ConsumerWidget {
               bottom: 0,
               left: 0,
               right: 0,
-              child: _BottomBar(state: state, notifier: notifier),
+              child: _BottomBar(
+                state: state,
+                notifier: notifier,
+                isContinuing: _isContinuing,
+                onContinue: () => _continueToQuickies(notifier),
+              ),
             ),
           ],
         ),
@@ -52,60 +85,15 @@ class FocusFilterScreen extends ConsumerWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _FocusHeader extends StatelessWidget {
-  const _FocusHeader({required this.state, required this.notifier});
-
-  final FocusFilterState state;
-  final FocusFilterNotifier notifier;
+  const _FocusHeader();
 
   @override
   Widget build(BuildContext context) {
-    final isListMode = state.viewMode == FocusViewMode.list;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: [View List] left ── [Reset] right
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton.icon(
-                onPressed: () => notifier.setViewMode(
-                  isListMode ? FocusViewMode.bubble : FocusViewMode.list,
-                ),
-                icon: Icon(
-                  isListMode
-                      ? Icons.bubble_chart_outlined
-                      : Icons.format_list_bulleted_rounded,
-                  size: 16,
-                ),
-                label: Text(isListMode ? 'Bubble View' : 'View List'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.onSurface.withValues(alpha: 0.65),
-                  textStyle: AppTheme.inter(
-                    fontSize: 13,
-                    weight: FontWeight.w500,
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: notifier.reset,
-                icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: const Text('Reset'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.onSurface.withValues(alpha: 0.65),
-                  textStyle: AppTheme.inter(
-                    fontSize: 13,
-                    weight: FontWeight.w500,
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 8),
           RichText(
             text: TextSpan(
@@ -142,53 +130,49 @@ class _FocusHeader extends StatelessWidget {
 // ── Bottom action bar ─────────────────────────────────────────────────────────
 
 class _BottomBar extends ConsumerWidget {
-  const _BottomBar({required this.state, required this.notifier});
+  const _BottomBar({
+    required this.state,
+    required this.notifier,
+    required this.isContinuing,
+    required this.onContinue,
+  });
 
   final FocusFilterState state;
   final FocusFilterNotifier notifier;
+  final bool isContinuing;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canContinue = state.canContinue;
+    final isListMode = state.viewMode == FocusViewMode.list;
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppTheme.surface.withValues(alpha: 0),
-            AppTheme.surface.withValues(alpha: 0.9),
-            AppTheme.surface,
-          ],
-          stops: const [0, 0.3, 1],
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+      child: Row(
         children: [
-          AnimatedOpacity(
-            opacity: canContinue ? 0.0 : 1.0,
-            duration: const Duration(milliseconds: 250),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                'Select at least ${FocusPriorityConfig.minSelections} to continue',
-                style: AppTheme.inter(
-                  fontSize: 12,
-                  color: AppTheme.onSurface.withValues(alpha: 0.42),
-                ),
-                textAlign: TextAlign.center,
-              ),
+          LiquidGlassCircleButton(
+            icon: isListMode
+                ? Icons.bubble_chart_outlined
+                : Icons.format_list_bulleted_rounded,
+            semanticLabel: isListMode ? 'Show bubbles' : 'Show list',
+            onTap: () => notifier.setViewMode(
+              isListMode ? FocusViewMode.bubble : FocusViewMode.list,
             ),
           ),
-          _ContinueButton(
-            canContinue: canContinue,
-            notifier: notifier,
-            onConfirmed: (config) {
-              ref.read(activeFocusPriorityProvider.notifier).state = config;
-              context.go('/home');
-            },
+          const SizedBox(width: 12),
+          Expanded(
+            child: _ContinueButton(
+              selectedCount: state.selected.length,
+              canContinue: canContinue,
+              isContinuing: isContinuing,
+              onContinue: onContinue,
+            ),
+          ),
+          const SizedBox(width: 12),
+          LiquidGlassCircleButton(
+            icon: Icons.refresh_rounded,
+            semanticLabel: 'Reset focus selections',
+            onTap: notifier.reset,
           ),
         ],
       ),
@@ -198,74 +182,35 @@ class _BottomBar extends ConsumerWidget {
 
 class _ContinueButton extends StatelessWidget {
   const _ContinueButton({
+    required this.selectedCount,
     required this.canContinue,
-    required this.notifier,
-    required this.onConfirmed,
+    required this.isContinuing,
+    required this.onContinue,
   });
 
+  final int selectedCount;
   final bool canContinue;
-  final FocusFilterNotifier notifier;
-  final void Function(FocusPriorityConfig config) onConfirmed;
+  final bool isContinuing;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: canContinue
-          ? () async {
-              final config = await notifier.saveAndComplete();
-              if (context.mounted) onConfirmed(config);
-            }
-          : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
-        height: 56,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: canContinue
-              ? const LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.accent],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                )
-              : null,
-          color: canContinue ? null : AppTheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: canContinue
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.28),
-                    blurRadius: 22,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Continue',
-              style: AppTheme.inter(
-                fontSize: 16,
-                weight: FontWeight.w600,
-                color: canContinue
-                    ? AppTheme.onPrimary
-                    : AppTheme.onSurface.withValues(alpha: 0.32),
-              ),
-            ),
-            if (canContinue) ...[
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.arrow_forward_rounded,
-                color: AppTheme.onPrimary,
-                size: 18,
-              ),
-            ],
-          ],
-        ),
-      ),
+    return LiquidGlassActionButton(
+      label: _label,
+      enabled: canContinue && !isContinuing,
+      icon: canContinue ? Icons.arrow_forward_rounded : null,
+      onTap: onContinue,
     );
+  }
+
+  String get _label {
+    if (isContinuing) return 'Preparing Quickies';
+
+    final remaining = FocusPriorityConfig.minSelections - selectedCount;
+    if (remaining <= 0) return 'Continue';
+    if (remaining == FocusPriorityConfig.minSelections) {
+      return 'Select at least 3 to continue';
+    }
+    return '$remaining more';
   }
 }

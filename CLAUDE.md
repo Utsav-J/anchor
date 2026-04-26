@@ -4,6 +4,9 @@ Your instruction prompts may contain md files that link to directories containin
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
+Dont run flutter tests
+Prioritise user satisfaction first
+
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
 ## 1. Think Before Coding

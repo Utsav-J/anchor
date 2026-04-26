@@ -7,34 +7,41 @@ import 'app.dart';
 import 'core/database/app_database.dart';
 import 'core/router/app_router.dart';
 import 'features/onboarding/focus_filter/focus_filter_notifier.dart';
+import 'features/onboarding/onboarding_progress.dart';
 import 'shared/models/focus_priority.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ── Load focus priorities from SharedPreferences ──────────────────────────
-  final prefs  = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
   final config = FocusPriorityConfig.tryDecode(
     prefs.getString('anchor.focus_priorities'),
+  );
+  final onboardingStage = OnboardingStage.fromString(
+    prefs.getString(kOnboardingStagePrefKey),
   );
 
   // ── Open the SQLite database and preload current-week data ────────────────
   final db = AppDatabase();
 
-  final now       = DateTime.now();
-  final monday    = now.subtract(Duration(days: now.weekday - 1));
+  final now = DateTime.now();
+  final monday = now.subtract(Duration(days: now.weekday - 1));
   final weekStart = DateTime(monday.year, monday.month, monday.day);
 
-  final logs      = await db.getLogsForWeek(weekStart);
+  final logs = await db.getLogsForWeek(weekStart);
   final templates = await db.getAllTemplates();
-  final history   = await db.getAllWeekSummaries();
+  final history = await db.getAllWeekSummaries();
 
   runApp(
     ProviderScope(
       overrides: [
         // Navigation
         initialLocationProvider.overrideWithValue(
-          config != null ? '/home' : '/onboarding/focus-filter',
+          OnboardingProgress.initialLocation(
+            hasFocusPriorities: config != null,
+            stage: onboardingStage,
+          ),
         ),
         // Focus priorities (shared_preferences)
         activeFocusPriorityProvider.overrideWith((ref) => config),

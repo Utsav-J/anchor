@@ -8,6 +8,7 @@ import '../../features/me/manage_focus_screen.dart';
 import '../../features/me/me_screen.dart';
 import '../../features/my_week/my_week_screen.dart';
 import '../../features/onboarding/focus_filter/focus_filter_screen.dart';
+import '../../features/onboarding/quickies/quickies_onboarding_screen.dart';
 import '../../features/ownership_reveal/ownership_reveal_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../shared/widgets/anchor_shell.dart';
@@ -81,6 +82,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/onboarding/focus-filter',
         name: 'focusFilter',
         builder: (context, state) => const FocusFilterScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/onboarding/quickies',
+        name: 'quickiesOnboarding',
+        builder: (context, state) => const QuickiesOnboardingScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

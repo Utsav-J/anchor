@@ -2,6 +2,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/database/app_database.dart';
 import '../../features/onboarding/focus_filter/focus_filter_notifier.dart';
+import '../../features/onboarding/quickies/quickies_onboarding_notifier.dart';
 import '../../shared/constants/app_constants.dart';
 import '../../shared/models/activity_log.dart';
 import '../../shared/models/category_draft.dart';
@@ -9,12 +10,14 @@ import '../../shared/models/focus_priority.dart';
 import '../../shared/models/quick_activity_template.dart';
 import '../../shared/models/week_draft.dart';
 
-final myWeekProvider =
-    StateNotifierProvider<MyWeekNotifier, WeekDraft>((ref) {
-  final config    = ref.read(activeFocusPriorityProvider);
-  final db        = ref.read(dbProvider);
-  final logs      = ref.read(preloadedLogsProvider);
-  final templates = ref.read(preloadedTemplatesProvider);
+final myWeekProvider = StateNotifierProvider<MyWeekNotifier, WeekDraft>((ref) {
+  final config = ref.read(activeFocusPriorityProvider);
+  final db = ref.read(dbProvider);
+  final logs = ref.read(preloadedLogsProvider);
+  final templates = [
+    ...ref.read(preloadedTemplatesProvider),
+    ...ref.watch(onboardingQuickTemplatesProvider),
+  ];
   return MyWeekNotifier(config, db, logs, templates);
 });
 
@@ -29,7 +32,7 @@ class MyWeekNotifier extends StateNotifier<WeekDraft> {
   final AppDatabase _db;
 
   static DateTime _currentWeekStart() {
-    final now    = DateTime.now();
+    final now = DateTime.now();
     final monday = now.subtract(Duration(days: now.weekday - 1));
     return DateTime(monday.year, monday.month, monday.day);
   }
@@ -43,9 +46,12 @@ class MyWeekNotifier extends StateNotifier<WeekDraft> {
 
     final metas = config != null
         ? config.orderedCategories
-            .map((name) =>
-                AppConstants.defaultCategories.firstWhere((c) => c.name == name))
-            .toList()
+              .map(
+                (name) => AppConstants.defaultCategories.firstWhere(
+                  (c) => c.name == name,
+                ),
+              )
+              .toList()
         : AppConstants.defaultCategories;
 
     final categories = metas.map((m) {
@@ -53,10 +59,12 @@ class MyWeekNotifier extends StateNotifier<WeekDraft> {
         name: m.name,
         templates: templates.where((t) => t.categoryName == m.name).toList(),
         logs: logs
-            .where((l) =>
-                l.categoryName == m.name &&
-                !l.loggedAt.isBefore(weekStart) &&
-                l.loggedAt.isBefore(weekStart.add(const Duration(days: 7))))
+            .where(
+              (l) =>
+                  l.categoryName == m.name &&
+                  !l.loggedAt.isBefore(weekStart) &&
+                  l.loggedAt.isBefore(weekStart.add(const Duration(days: 7))),
+            )
             .toList(),
       );
     }).toList();
@@ -86,8 +94,9 @@ class MyWeekNotifier extends StateNotifier<WeekDraft> {
   void addTemplate(String categoryName, QuickActivityTemplate template) {
     final idx = _categoryIndex(categoryName);
     if (idx == -1) return;
-    final updated = state.categories[idx]
-        .copyWith(templates: [...state.categories[idx].templates, template]);
+    final updated = state.categories[idx].copyWith(
+      templates: [...state.categories[idx].templates, template],
+    );
     state = state.copyWith(categories: _replaceAt(idx, updated));
     _db.insertTemplate(template); // fire-and-forget persist
   }
@@ -112,8 +121,9 @@ class MyWeekNotifier extends StateNotifier<WeekDraft> {
   void logActivity(String categoryName, ActivityLog log) {
     final idx = _categoryIndex(categoryName);
     if (idx == -1) return;
-    final updated = state.categories[idx]
-        .copyWith(logs: [...state.categories[idx].logs, log]);
+    final updated = state.categories[idx].copyWith(
+      logs: [...state.categories[idx].logs, log],
+    );
     state = state.copyWith(categories: _replaceAt(idx, updated));
     _db.insertLog(log); // fire-and-forget persist
   }
