@@ -147,7 +147,7 @@ class _BottomBar extends ConsumerWidget {
     final canContinue = state.canContinue;
     final isListMode = state.viewMode == FocusViewMode.list;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 26),
       child: Row(
         children: [
           LiquidGlassCircleButton(

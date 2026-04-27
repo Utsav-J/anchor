@@ -19,6 +19,8 @@ class CategoryBubble extends StatelessWidget {
     required this.totalSelected,
     required this.onTap,
     required this.onLongPress,
+    this.size = kCategoryCircleSize,
+    this.selectedSize = kSelectedCategoryCircleSize,
   });
 
   final CategoryMeta meta;
@@ -28,6 +30,8 @@ class CategoryBubble extends StatelessWidget {
   final int totalSelected;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final double size;
+  final double selectedSize;
 
   // Order matches AppConstants.defaultCategories.
   static const _gradients = [
@@ -62,7 +66,7 @@ class CategoryBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = priority != null;
     final idx = _idx(meta.name);
-    final size = isSelected ? kSelectedCategoryCircleSize : kCategoryCircleSize;
+    final circleSize = isSelected ? selectedSize : size;
     final gradientColors = _gradientColors(idx, isSelected);
     final label = meta.name.replaceAll('-', '\n').toUpperCase();
 
@@ -76,8 +80,8 @@ class CategoryBubble extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 380),
         curve: Curves.easeOutCubic,
-        width: size,
-        height: size,
+        width: circleSize,
+        height: circleSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(

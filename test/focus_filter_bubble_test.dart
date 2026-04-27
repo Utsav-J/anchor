@@ -63,4 +63,22 @@ void main() {
 
     expect(laterCreativeCenter, initialCreativeCenter);
   });
+
+  testWidgets('category circles fit without a scroll view', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(width: 390, height: 620, child: BubbleCanvas()),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(find.text('CREATIVE'), findsOneWidget);
+    expect(find.text('CONNECTION'), findsOneWidget);
+  });
 }
