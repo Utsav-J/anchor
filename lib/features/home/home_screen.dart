@@ -20,10 +20,8 @@ class HomeScreen extends ConsumerWidget {
     final ratio = week.ownershipRatio;
     final heatmap = week.heatmapScores;
     final lastFour = history.take(4).toList();
-    final prevRatio =
-        history.isNotEmpty ? history.first.ownershipRatio : null;
-    final trendDelta =
-        prevRatio != null ? (ratio - prevRatio) : null;
+    final prevRatio = history.isNotEmpty ? history.first.ownershipRatio : null;
+    final trendDelta = prevRatio != null ? (ratio - prevRatio) : null;
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
@@ -101,13 +99,8 @@ class _HomeTopBar extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 4.h),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.menu,
-            color: AppTheme.onSurface.withValues(alpha: 0.55),
-            size: 24.sp,
-          ),
-          SizedBox(width: 12.w),
           Text(
             'Anchor',
             style: AppTheme.notoSerif(
@@ -116,16 +109,7 @@ class _HomeTopBar extends StatelessWidget {
               weight: FontWeight.w500,
             ),
           ),
-          const Spacer(),
-          CircleAvatar(
-            radius: 18.r,
-            backgroundColor: AppTheme.surfaceContainerHighest,
-            child: Icon(
-              Icons.person_outline,
-              color: AppTheme.onSurface.withValues(alpha: 0.55),
-              size: 20.sp,
-            ),
-          ),
+          // const Spacer(),
         ],
       ),
     );
@@ -247,8 +231,9 @@ class _TrendBadge extends StatelessWidget {
     final color = isFlat
         ? AppTheme.textMuted
         : (isUp ? const Color(0xFF2E7D32) : const Color(0xFFC62828));
-    final label =
-        isFlat ? 'same as last week' : '${delta.abs().toStringAsFixed(1)}%  vs last week';
+    final label = isFlat
+        ? 'same as last week'
+        : '${delta.abs().toStringAsFixed(1)}%  vs last week';
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -263,10 +248,7 @@ class _TrendBadge extends StatelessWidget {
         ),
         Text(
           label,
-          style: AppTheme.inter(
-            fontSize: 12,
-            color: AppTheme.textMuted,
-          ),
+          style: AppTheme.inter(fontSize: 12, color: AppTheme.textMuted),
         ),
       ],
     );
@@ -371,7 +353,10 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(left, style: AppTheme.notoSerif(fontSize: 20, weight: FontWeight.w500)),
+        Text(
+          left,
+          style: AppTheme.notoSerif(fontSize: 20, weight: FontWeight.w500),
+        ),
         const Spacer(),
         if (right != null)
           Text(
@@ -413,7 +398,9 @@ class _HeatmapRow extends StatelessWidget {
           if (isEmpty) {
             fill = AppTheme.surfaceContainerLow;
           } else {
-            fill = AppTheme.accent.withValues(alpha: (score / 10).clamp(0.15, 1.0));
+            fill = AppTheme.accent.withValues(
+              alpha: (score / 10).clamp(0.15, 1.0),
+            );
           }
 
           return Column(
@@ -469,9 +456,7 @@ class _LastFourGrid extends StatelessWidget {
       childAspectRatio: 1.1,
       children: [
         for (int i = 0; i < 4; i++)
-          i < weeks.length
-              ? _WeekCard(summary: weeks[i])
-              : _WeekCardEmpty(),
+          i < weeks.length ? _WeekCard(summary: weeks[i]) : _WeekCardEmpty(),
       ],
     );
   }
@@ -568,7 +553,11 @@ class _PrivacyFooter extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified_user_outlined, size: 14.sp, color: AppTheme.primary),
+          Icon(
+            Icons.verified_user_outlined,
+            size: 14.sp,
+            color: AppTheme.primary,
+          ),
           SizedBox(width: 6.w),
           Text(
             'Your data lives only on this phone',

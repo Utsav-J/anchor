@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+<!--
+    API 21+ splash background.
+    Use the adaptive-icon foreground (inset 16%) instead of the full launcher
+    icon so no white rounded-rect container appears against the cream background.
+    On API 26+ the @mipmap/launcher_icon resolves to the adaptive-icon XML,
+    but <bitmap> elements cannot render adaptive icons — so we reference the
+    density-specific foreground drawable directly here for all pre-31 APIs.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
 
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/launcher_icon" />
+            android:src="@drawable/ic_launcher_foreground" />
     </item>
 </layer-list>

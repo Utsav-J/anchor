@@ -32,7 +32,10 @@ dependencies:
   shared_preferences: ^2.5.5
   blobs: ^2.0.0
   flutter_liquid_glass_plus: 0.0.7
+  bubble_picker: ^0.0.3
   flutter_launcher_icons: ^0.14.4
+  rive: ^0.13.20
+  rive_animated_icon: ^2.0.5
 
 dev_dependencies:
   flutter_test:

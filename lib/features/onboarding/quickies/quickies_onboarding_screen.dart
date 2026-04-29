@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:bubble_picker/bubble_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -13,6 +14,13 @@ import '../focus_filter/widgets/category_bubble.dart';
 import '../onboarding_progress.dart';
 import 'quick_activity_catalog.dart';
 import 'quickies_onboarding_notifier.dart';
+
+// Same virtual canvas as BubbleCanvas so physics feel identical on both screens.
+const _kVirtualSize = Size(400, 800);
+
+// radius formula: actualPixelRadius = data.radius * 20 + 20
+// 0.8 → 36px radius (72px diameter)
+const _kActivityBubbleRadius = 0.8;
 
 class QuickiesOnboardingScreen extends ConsumerWidget {
   const QuickiesOnboardingScreen({super.key});
@@ -63,7 +71,7 @@ class QuickiesOnboardingScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Tap a focus circle to expand active quick activities.',
+                          'Tap a focus bubble to pick quick activities.',
                           textAlign: TextAlign.center,
                           style: AppTheme.inter(
                             fontSize: 14,
@@ -127,7 +135,7 @@ class QuickiesOnboardingScreen extends ConsumerWidget {
             if (quickiesState.openCategoryName != null)
               _ExpandedCategoryPanel(
                 category: categories.firstWhere(
-                  (category) => category.name == quickiesState.openCategoryName,
+                  (c) => c.name == quickiesState.openCategoryName,
                 ),
               ),
           ],
@@ -137,9 +145,8 @@ class QuickiesOnboardingScreen extends ConsumerWidget {
   }
 
   Future<void> _finishOnboarding(BuildContext context, WidgetRef ref) async {
-    final templates = ref
-        .read(quickiesOnboardingProvider.notifier)
-        .selectedTemplates();
+    final templates =
+        ref.read(quickiesOnboardingProvider.notifier).selectedTemplates();
     final db = ref.read(dbProvider);
 
     for (final template in templates) {
@@ -162,6 +169,8 @@ class QuickiesOnboardingScreen extends ConsumerWidget {
   }
 }
 
+// ── Category circles (main screen) ───────────────────────────────────────────
+
 class _QuickiesCategoryCircle extends StatelessWidget {
   const _QuickiesCategoryCircle({
     required this.category,
@@ -178,7 +187,7 @@ class _QuickiesCategoryCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final meta = AppConstants.defaultCategories.firstWhere(
-      (categoryMeta) => categoryMeta.name == category.name,
+      (m) => m.name == category.name,
     );
 
     return Hero(
@@ -194,21 +203,33 @@ class _QuickiesCategoryCircle extends StatelessWidget {
   }
 }
 
-class _ExpandedCategoryPanel extends ConsumerWidget {
+// ── Expanded activity selection panel ─────────────────────────────────────────
+
+class _ExpandedCategoryPanel extends ConsumerStatefulWidget {
   const _ExpandedCategoryPanel({required this.category});
 
   final QuickActivityCategory category;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ExpandedCategoryPanel> createState() =>
+      _ExpandedCategoryPanelState();
+}
+
+class _ExpandedCategoryPanelState
+    extends ConsumerState<_ExpandedCategoryPanel> {
+  @override
+  Widget build(BuildContext context) {
     final quickiesState = ref.watch(quickiesOnboardingProvider);
     final notifier = ref.read(quickiesOnboardingProvider.notifier);
-    final options = notifier.visibleOptionsFor(category.name);
-    final selectedCount = options
-        .where((option) => quickiesState.isSelected(option.id))
-        .length;
+
+    // Count how many activities from this category are selected.
+    final allOptions =
+        QuickActivityCatalog.optionsForCategory(widget.category.name);
+    final selectedCount =
+        allOptions.where((o) => quickiesState.isSelected(o.id)).length;
+
     final gradientColors = CategoryBubble.gradientColorsFor(
-      category.name,
+      widget.category.name,
       selected: true,
     );
 
@@ -248,9 +269,11 @@ class _ExpandedCategoryPanel extends ConsumerWidget {
               );
             },
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Header
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 18),
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
                   child: Row(
                     children: [
                       LiquidGlassActionButton(
@@ -264,81 +287,113 @@ class _ExpandedCategoryPanel extends ConsumerWidget {
                       const Spacer(),
                       LiquidGlassCircleButton(
                         icon: Icons.check_rounded,
-                        semanticLabel: 'Save ${category.name} quickies',
+                        semanticLabel:
+                            'Save ${widget.category.name} quickies',
                         enabled: selectedCount > 0,
                         size: 42,
-                        onTap: () => _saveCategorySelection(ref, category.name),
+                        onTap: () => _saveCategorySelection(
+                          ref,
+                          widget.category.name,
+                        ),
                       ),
                     ],
                   ),
                 ),
+
+                // Category title + description
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      Text(
+                        widget.category.name,
+                        textAlign: TextAlign.center,
+                        style: AppTheme.notoSerif(
+                          fontSize: 36,
+                          weight: FontWeight.w700,
+                          italic: true,
+                          color: AppTheme.primary,
+                          height: 1.05,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.category.headline,
+                        textAlign: TextAlign.center,
+                        style: AppTheme.inter(
+                          fontSize: 14,
+                          height: 1.4,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.category.prompt,
+                        textAlign: TextAlign.center,
+                        style: AppTheme.inter(
+                          fontSize: 11,
+                          weight: FontWeight.w600,
+                          color: AppTheme.onSurface.withValues(alpha: 0.5),
+                          letterSpacing: 0.7,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Activity bubbles (BubblePicker) — fills remaining space.
+                // Same virtual canvas & OverflowBox trick as BubbleCanvas so
+                // the physics feel identical to the focus-filter screen.
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 40),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          category.name,
-                          textAlign: TextAlign.center,
-                          style: AppTheme.notoSerif(
-                            fontSize: 40,
-                            weight: FontWeight.w700,
-                            italic: true,
-                            color: AppTheme.primary,
-                            height: 1.05,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          category.headline,
-                          textAlign: TextAlign.center,
-                          style: AppTheme.inter(
-                            fontSize: 15,
-                            height: 1.4,
-                            color: AppTheme.textMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          category.prompt,
-                          textAlign: TextAlign.center,
-                          style: AppTheme.inter(
-                            fontSize: 12,
-                            weight: FontWeight.w600,
-                            color: AppTheme.onSurface.withValues(alpha: 0.5),
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 260),
-                          child: Wrap(
-                            key: ValueKey(
-                              options.map((option) => option.id).join(),
+                  child: ClipRect(
+                    child: OverflowBox(
+                      maxWidth: _kVirtualSize.width,
+                      maxHeight: _kVirtualSize.height,
+                      alignment: Alignment.center,
+                      child: BubblePicker(
+                        size: _kVirtualSize,
+                        bubbles: [
+                          for (final option in allOptions)
+                            _buildActivityBubble(
+                              option,
+                              widget.category.name,
+                              notifier,
                             ),
-                            alignment: WrapAlignment.center,
-                            spacing: 10,
-                            runSpacing: 12,
-                            children: [
-                              for (final option in options)
-                                _QuickActivityChip(
-                                  option: option,
-                                  selected: quickiesState.isSelected(option.id),
-                                  onTap: () => notifier.toggleOption(option.id),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 16),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  BubbleData _buildActivityBubble(
+    QuickActivityOption option,
+    String categoryName,
+    QuickiesOnboardingNotifier notifier,
+  ) {
+    return BubbleData(
+      color: Colors.transparent,
+      radius: _kActivityBubbleRadius,
+      child: Consumer(
+        builder: (_, ref, _) {
+          final isSelected =
+              ref.watch(quickiesOnboardingProvider).isSelected(option.id);
+          return _ActivityBubbleContent(
+            option: option,
+            categoryName: categoryName,
+            isSelected: isSelected,
+          );
+        },
+      ),
+      onTapBubble: (_) => notifier.toggleOption(option.id),
     );
   }
 
@@ -356,74 +411,100 @@ class _ExpandedCategoryPanel extends ConsumerWidget {
 
     final existing = ref.read(onboardingQuickTemplatesProvider);
     final byId = {
-      for (final template in existing) template.id: template,
-      for (final template in templates) template.id: template,
+      for (final t in existing) t.id: t,
+      for (final t in templates) t.id: t,
     };
-    ref.read(onboardingQuickTemplatesProvider.notifier).state = byId.values
-        .toList(growable: false);
+    ref.read(onboardingQuickTemplatesProvider.notifier).state =
+        byId.values.toList(growable: false);
 
     notifier.saveOpenCategorySelection();
   }
 }
 
-class _QuickActivityChip extends StatelessWidget {
-  const _QuickActivityChip({
+// ── Activity bubble visual ────────────────────────────────────────────────────
+
+class _ActivityBubbleContent extends StatelessWidget {
+  const _ActivityBubbleContent({
     required this.option,
-    required this.selected,
-    required this.onTap,
+    required this.categoryName,
+    required this.isSelected,
   });
 
   final QuickActivityOption option;
-  final bool selected;
-  final VoidCallback onTap;
+  final String categoryName;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    final gradientColors =
+        CategoryBubble.gradientColorsFor(categoryName, selected: isSelected);
+
+    return SizedBox.expand(
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 260),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.primaryFixed
-              : AppTheme.surfaceContainerLowest.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected
-                ? AppTheme.accent.withValues(alpha: 0.32)
-                : AppTheme.outlineVariant.withValues(alpha: 0.44),
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
           boxShadow: [
             BoxShadow(
-              color: selected
-                  ? AppTheme.accent.withValues(alpha: 0.16)
+              color: isSelected
+                  ? gradientColors.last.withValues(alpha: 0.22)
                   : AppTheme.onSurface.withValues(alpha: 0.04),
-              blurRadius: selected ? 24 : 14,
-              offset: const Offset(0, 8),
+              blurRadius: isSelected ? 18 : 10,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(option.emoji, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
-            Text(
-              option.label,
-              style: AppTheme.inter(
-                fontSize: 13,
-                weight: selected ? FontWeight.w800 : FontWeight.w600,
-                color: AppTheme.onSurface.withValues(alpha: 0.86),
-              ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(7),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  option.emoji,
+                  style: const TextStyle(fontSize: 15, height: 1),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  option.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.inter(
+                    fontSize: 7.5,
+                    weight:
+                        isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: AppTheme.onSurface.withValues(
+                      alpha: isSelected ? 0.9 : 0.7,
+                    ),
+                    height: 1.15,
+                  ),
+                ),
+                if (isSelected)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 10,
+                      color: AppTheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+// ── Bottom bar ────────────────────────────────────────────────────────────────
 
 class _QuickiesBottomBar extends StatelessWidget {
   const _QuickiesBottomBar({
@@ -490,6 +571,8 @@ class _QuickiesBottomBar extends StatelessWidget {
   }
 }
 
+// ── Circle reveal clipper ─────────────────────────────────────────────────────
+
 class _CircleRevealClipper extends CustomClipper<Path> {
   const _CircleRevealClipper({required this.progress});
 
@@ -502,11 +585,12 @@ class _CircleRevealClipper extends CustomClipper<Path> {
       size.width * size.width + size.height * size.height,
     );
     return Path()
-      ..addOval(Rect.fromCircle(center: center, radius: maxRadius * progress));
+      ..addOval(
+        Rect.fromCircle(center: center, radius: maxRadius * progress),
+      );
   }
 
   @override
-  bool shouldReclip(_CircleRevealClipper oldClipper) {
-    return oldClipper.progress != progress;
-  }
+  bool shouldReclip(_CircleRevealClipper oldClipper) =>
+      oldClipper.progress != progress;
 }

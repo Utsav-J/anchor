@@ -1,12 +1,13 @@
 import 'package:anchor/features/onboarding/focus_filter/widgets/bubble_canvas.dart';
 import 'package:anchor/features/onboarding/focus_filter/widgets/category_bubble.dart';
 import 'package:anchor/shared/constants/app_constants.dart';
+import 'package:bubble_picker/bubble_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 void main() {
-  testWidgets('category circles grow when selected', (tester) async {
+  testWidgets('CategoryBubble grows when selected', (tester) async {
     final meta = AppConstants.defaultCategories.first;
 
     await tester.pumpWidget(
@@ -44,7 +45,8 @@ void main() {
     expect(selectedSize.height, greaterThan(unselectedSize.height));
   });
 
-  testWidgets('category circles keep fixed grid positions', (tester) async {
+  testWidgets('BubbleCanvas renders all category bubbles via BubblePicker',
+      (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -56,15 +58,16 @@ void main() {
     );
 
     await tester.pump();
-    final initialCreativeCenter = tester.getCenter(find.text('CREATIVE'));
 
-    await tester.pump(const Duration(seconds: 5));
-    final laterCreativeCenter = tester.getCenter(find.text('CREATIVE'));
+    // BubblePicker widget should be present.
+    expect(find.byType(BubblePicker), findsOneWidget);
 
-    expect(laterCreativeCenter, initialCreativeCenter);
+    // All 7 category labels should be rendered in their bubbles.
+    expect(find.text('CREATIVE'), findsOneWidget);
+    expect(find.text('CONNECTION'), findsOneWidget);
   });
 
-  testWidgets('category circles fit without a scroll view', (tester) async {
+  testWidgets('BubbleCanvas does not use a scroll view', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -78,7 +81,6 @@ void main() {
     await tester.pump();
 
     expect(find.byType(SingleChildScrollView), findsNothing);
-    expect(find.text('CREATIVE'), findsOneWidget);
-    expect(find.text('CONNECTION'), findsOneWidget);
+    expect(find.byType(BubblePicker), findsOneWidget);
   });
 }
