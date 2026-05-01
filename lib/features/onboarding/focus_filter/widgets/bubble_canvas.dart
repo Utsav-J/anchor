@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/constants/app_constants.dart';
 import '../focus_filter_notifier.dart';
 import 'category_bubble.dart';
+import 'focus_category_bubble_interior.dart';
 
 // The BubblePicker package has a hardcoded cluster center at Offset(200, 400),
 // matching its default canvas Size(400, 800). We always pass this exact size and
@@ -13,9 +14,12 @@ import 'category_bubble.dart';
 // of whatever space is actually available.
 const _kVirtualSize = Size(400, 800);
 
-// radius formula in the package: actualPixelRadius = data.radius * 20 + 20
-// 0.9 → 38px radius (76px diameter)
+// radius formula (packages/bubble_picker fork): actualPixelRadius = data.radius * 40 + 40
+// 0.9 → 76px radius (152px diameter), twice the upstream package default.
 const _kCategoryBubbleRadius = 0.9;
+
+/// Multiplier applied when a bubble is selected (returns to 1.0 when deselected).
+const _kSelectedBubbleScale = 1.12;
 
 /// Physics-based bubble canvas for focus category selection.
 ///
@@ -129,12 +133,20 @@ class _CategoryBubbleContent extends StatelessWidget {
     final isSelected = priority != null;
     final exitUnselected = isExiting && !isSelected;
 
+    final bubbleScale = exitUnselected
+        ? 0.3
+        : !isSelected
+            ? 1.0
+            : isExiting
+                ? _kSelectedBubbleScale * 1.08
+                : _kSelectedBubbleScale;
+
     return AnimatedOpacity(
       opacity: exitUnselected ? 0.0 : 1.0,
       duration: const Duration(milliseconds: 360),
       curve: Curves.easeOutCubic,
       child: AnimatedScale(
-        scale: exitUnselected ? 0.3 : isExiting ? 1.08 : 1.0,
+        scale: bubbleScale,
         duration: const Duration(milliseconds: 420),
         curve: Curves.easeOutCubic,
         child: _CategoryBubbleCircle(
@@ -163,7 +175,6 @@ class _CategoryBubbleCircle extends StatelessWidget {
     final isSelected = priority != null;
     final gradientColors =
         CategoryBubble.gradientColorsFor(meta.name, selected: isSelected);
-    final label = meta.name.replaceAll('-', '\n').toUpperCase();
 
     final glowStrength = (isSelected && totalSelected > 0)
         ? (totalSelected - priority! + 1) / totalSelected
@@ -172,89 +183,77 @@ class _CategoryBubbleCircle extends StatelessWidget {
     // SizedBox.expand fills the bubble.radius*2 SizedBox that BubblePicker
     // wraps around each child.
     return SizedBox.expand(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: gradientColors.last.withValues(
-                      alpha: 0.24 + glowStrength * 0.12,
-                    ),
-                    blurRadius: 16 + glowStrength * 8,
-                    spreadRadius: 2 + glowStrength * 3,
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: AppTheme.onSurface.withValues(alpha: 0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(7),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutCubic,
-                  style: AppTheme.inter(
-                    fontSize: isSelected ? 9.5 : 8.5,
-                    weight:
-                        isSelected ? FontWeight.w700 : FontWeight.w600,
-                    color: isSelected
-                        ? AppTheme.onSurface.withValues(alpha: 0.9)
-                        : AppTheme.onSurface.withValues(alpha: 0.68),
-                    height: 1.1,
-                    letterSpacing: 0.6,
-                  ),
-                  child: Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(scale: animation, child: child),
-                  ),
-                  child: isSelected
-                      ? Padding(
-                          key: ValueKey(priority),
-                          padding: const EdgeInsets.only(top: 3),
-                          child: Text(
-                            '$priority',
-                            style: AppTheme.inter(
-                              fontSize: 15,
-                              weight: FontWeight.w800,
-                              color: AppTheme.onSurface
-                                  .withValues(alpha: 0.9),
-                              height: 1,
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 380),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient:
+                  CategoryBubble.liquidGradientFor(meta.name, selected: isSelected),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: gradientColors.last.withValues(
+                          alpha: 0.24 + glowStrength * 0.12,
+                        ),
+                        blurRadius: 16 + glowStrength * 8,
+                        spreadRadius: 2 + glowStrength * 3,
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: AppTheme.onSurface.withValues(alpha: 0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
             ),
           ),
-        ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: CategoryBubble.sphereOcclusionFor(
+                    selected: isSelected,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: CategoryBubble.liquidSpecularFor(
+                    meta.name,
+                    selected: isSelected,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: FocusCategoryBubbleInterior(
+                categoryName: meta.name,
+                isSelected: isSelected,
+                priority: priority,
+                iconSize: isSelected ? 30 : 28,
+                labelFontSize: isSelected ? 12.5 : 11.5,
+                priorityFontSize: 17,
+                maxLabelWidth: 108,
+                iconBottomSpacing: 5,
+                priorityTopSpacing: 3,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

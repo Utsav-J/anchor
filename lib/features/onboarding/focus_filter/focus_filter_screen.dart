@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -9,6 +11,9 @@ import '../../../shared/widgets/liquid_glass_action_button.dart';
 import 'focus_filter_notifier.dart';
 import 'widgets/bubble_canvas.dart';
 import 'widgets/focus_list_panel.dart';
+
+/// Visual top inset for [FocusListPanel] so content clears the floating glass header.
+const double _kFocusListTopInset = 118;
 
 class FocusFilterScreen extends ConsumerStatefulWidget {
   const FocusFilterScreen({super.key});
@@ -45,24 +50,30 @@ class _FocusFilterScreenState extends ConsumerState<FocusFilterScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const _FocusHeader(),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: state.viewMode == FocusViewMode.bubble
-                        ? BubbleCanvas(
-                            key: const ValueKey('bubble'),
-                            isExiting: _isContinuing,
-                          )
-                        : const FocusListPanel(key: ValueKey('list')),
-                  ),
-                ),
-              ],
+            Positioned.fill(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: state.viewMode == FocusViewMode.bubble
+                    ? BubbleCanvas(
+                        key: const ValueKey('bubble'),
+                        isExiting: _isContinuing,
+                      )
+                    : Padding(
+                        key: const ValueKey('list'),
+                        padding: const EdgeInsets.only(
+                          top: _kFocusListTopInset,
+                        ),
+                        child: const FocusListPanel(),
+                      ),
+              ),
+            ),
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _FocusHeaderGlass(),
             ),
             Positioned(
               bottom: 0,
@@ -82,46 +93,60 @@ class _FocusFilterScreenState extends ConsumerState<FocusFilterScreen> {
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── Header (frosted glass over bubble layer) ──────────────────────────────────
 
-class _FocusHeader extends StatelessWidget {
-  const _FocusHeader();
+class _FocusHeaderGlass extends StatelessWidget {
+  const _FocusHeaderGlass();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          RichText(
-            text: TextSpan(
-              style: AppTheme.notoSerif(fontSize: 26, weight: FontWeight.w700),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppTheme.surface.withValues(alpha: 0.35),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const TextSpan(text: 'Set Your '),
-                TextSpan(
-                  text: 'Focus',
-                  style: AppTheme.notoSerif(
-                    fontSize: 26,
-                    weight: FontWeight.w700,
-                    italic: true,
-                    color: AppTheme.primary,
+                const SizedBox(height: 8),
+                RichText(
+                  text: TextSpan(
+                    style: AppTheme.notoSerif(
+                      fontSize: 26,
+                      weight: FontWeight.w700,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Set Your '),
+                      TextSpan(
+                        text: 'Focus',
+                        style: AppTheme.notoSerif(
+                          fontSize: 26,
+                          weight: FontWeight.w700,
+                          italic: true,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap to rank your priorities. Skip the ones you want to rest on.',
+                  style: AppTheme.inter(
+                    fontSize: 13,
+                    color: AppTheme.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Tap to rank your priorities. Skip the ones you want to rest on.',
-            style: AppTheme.inter(
-              fontSize: 13,
-              color: AppTheme.onSurface.withValues(alpha: 0.55),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
+        ),
       ),
     );
   }

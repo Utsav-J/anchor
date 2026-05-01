@@ -7,6 +7,8 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 Dont run flutter tests
 Prioritise user satisfaction first
 
+Always ask if you need clarifications before you start implementation.
+
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
 ## 1. Think Before Coding

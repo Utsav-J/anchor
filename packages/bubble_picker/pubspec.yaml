@@ -1,0 +1,19 @@
+name: bubble_picker
+description: A Flutter widget for displaying and interacting with customizable, animated bubbles which grow in size when selected.
+version: 0.0.3+anchor.1
+homepage: https://github.com/Yellowtoast/bubble_picker
+
+environment:
+  sdk: ">=3.1.5 <4.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  mockito: ^5.4.4
+  build_runner: ^2.4.9

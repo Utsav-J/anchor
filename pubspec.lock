@@ -60,11 +60,10 @@ packages:
   bubble_picker:
     dependency: "direct main"
     description:
-      name: bubble_picker
-      sha256: f69f8079f99a3bb231bdf4a0c3433e7c0b2978642b406d52ee30318967c86a88
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.3"
+      path: "packages/bubble_picker"
+      relative: true
+    source: path
+    version: "0.0.3+anchor.1"
   build:
     dependency: transitive
     description:

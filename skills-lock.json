@@ -6,6 +6,12 @@
       "sourceType": "github",
       "computedHash": "2566cbf8afb7241892fc626cf6713692e12fad7acdbead07b2a278e403faf996"
     },
+    "flutter-adaptive-ui": {
+      "source": "MADTeacher/mad-agents-skills",
+      "sourceType": "github",
+      "skillPath": "flutter-adaptive-ui/SKILL.md",
+      "computedHash": "7b9c4ecda94f80ae16addab433432ae0e76d1b114a3f87e2df9269954e6196b6"
+    },
     "flutter-adding-home-screen-widgets": {
       "source": "flutter/skills",
       "sourceType": "github",
@@ -17,8 +23,9 @@
       "computedHash": "217700e356dae9e3624a54543aa366aca3871aa3c0368856156715e211aeac4c"
     },
     "flutter-animations": {
-      "source": "madteacher/mad-agents-skills",
+      "source": "MADTeacher/mad-agents-skills",
       "sourceType": "github",
+      "skillPath": "flutter-animations/SKILL.md",
       "computedHash": "0c62d299cfdb82a8a22eadcb9b58c998cb6ceb85368a342689143a0278e4c7bb"
     },
     "flutter-architecting-apps": {
@@ -41,6 +48,18 @@
       "sourceType": "github",
       "computedHash": "94d264d06725eb88d19f32eb21ba202fbaf887c4ce679ecd99cfd86a83b1748c"
     },
+    "flutter-drift": {
+      "source": "MADTeacher/mad-agents-skills",
+      "sourceType": "github",
+      "skillPath": "flutter-drift/SKILL.md",
+      "computedHash": "fdc83f22f073ca2d925c3255bd8c206475caf29c7f15c52ef41f5f848c2e126f"
+    },
+    "flutter-duit-bdui": {
+      "source": "MADTeacher/mad-agents-skills",
+      "sourceType": "github",
+      "skillPath": "flutter-duit-bdui/SKILL.md",
+      "computedHash": "4cdc2cb6387024b75032f18e6f40468f70912efe1c27f14a778c351af7325fee"
+    },
     "flutter-expert": {
       "source": "jeffallan/claude-skills",
       "sourceType": "github",
@@ -61,10 +80,28 @@
       "sourceType": "github",
       "computedHash": "2104011c04e3850af4edbace09f64ccec78fa2a92260500a51a1d52f33acb415"
     },
+    "flutter-internationalization": {
+      "source": "MADTeacher/mad-agents-skills",
+      "sourceType": "github",
+      "skillPath": "flutter-internationalization/SKILL.md",
+      "computedHash": "0273dbd14444877c8c0acce18b4fc2fce8f3cb6cee2c52bdfd256f6858a73a83"
+    },
     "flutter-managing-state": {
       "source": "flutter/skills",
       "sourceType": "github",
       "computedHash": "14b60303535c07f900097f2054613f0835668f202c289b0429446aba28941576"
+    },
+    "flutter-navigation": {
+      "source": "MADTeacher/mad-agents-skills",
+      "sourceType": "github",
+      "skillPath": "flutter-navigation/SKILL.md",
+      "computedHash": "97f3a140c1022a8f3f046321341bb28ccbf622df384884b87701a152b8d938d6"
+    },
+    "flutter-networking": {
+      "source": "MADTeacher/mad-agents-skills",
+      "sourceType": "github",
+      "skillPath": "flutter-networking/SKILL.md",
+      "computedHash": "7d8fadbafef90304a4b28ed9f41b469de108582f1a702ac0ece7d3e121945694"
     }
   }
 }
