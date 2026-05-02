@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../shared/models/user_schedule.dart';
 import '../../shared/models/week_summary.dart';
 import '../my_week/my_week_notifier.dart';
 import '../my_week/week_history_notifier.dart';
@@ -16,6 +17,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final week = ref.watch(myWeekProvider);
     final history = ref.watch(weekHistoryProvider);
+    final schedule = ref.watch(userScheduleProvider);
 
     final ratio = week.ownershipRatio;
     final heatmap = week.heatmapScores;
@@ -58,6 +60,10 @@ class HomeScreen extends ConsumerWidget {
 
                     // ── Hero ring ─────────────────────────────────────────
                     _OwnershipHero(ratio: ratio, trendDelta: trendDelta),
+                    if (schedule != null && schedule.weeklyOwnedHours > 0) ...[
+                      SizedBox(height: 10.h),
+                      _ScheduleContext(weeklyHours: schedule.weeklyOwnedHours),
+                    ],
                     SizedBox(height: 28.h),
 
                     // ── CTA ───────────────────────────────────────────────
@@ -534,6 +540,31 @@ class _WeekCardEmpty extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Schedule context ──────────────────────────────────────────────────────────
+
+class _ScheduleContext extends StatelessWidget {
+  const _ScheduleContext({required this.weeklyHours});
+  final int weeklyHours;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Text(
+        '~$weeklyHours personal hours available this week',
+        style: AppTheme.inter(
+          fontSize: 11,
+          color: AppTheme.onSurface.withValues(alpha: 0.55),
+        ),
       ),
     );
   }

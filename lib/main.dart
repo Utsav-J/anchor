@@ -9,11 +9,12 @@ import 'core/router/app_router.dart';
 import 'features/onboarding/focus_filter/focus_filter_notifier.dart';
 import 'features/onboarding/onboarding_progress.dart';
 import 'shared/models/focus_priority.dart';
+import 'shared/models/user_schedule.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ── Load focus priorities from SharedPreferences ──────────────────────────
+  // ── Load persisted data from SharedPreferences ────────────────────────────
   final prefs = await SharedPreferences.getInstance();
   final config = FocusPriorityConfig.tryDecode(
     prefs.getString('anchor.focus_priorities'),
@@ -21,6 +22,7 @@ void main() async {
   final onboardingStage = OnboardingStage.fromString(
     prefs.getString(kOnboardingStagePrefKey),
   );
+  final schedule = await UserSchedule.load();
 
   // ── Open the SQLite database and preload current-week data ────────────────
   final db = AppDatabase();
@@ -41,10 +43,13 @@ void main() async {
           OnboardingProgress.initialLocation(
             hasFocusPriorities: config != null,
             stage: onboardingStage,
+            hasSchedule: schedule != null,
           ),
         ),
         // Focus priorities (shared_preferences)
         activeFocusPriorityProvider.overrideWith((ref) => config),
+        // Schedule
+        userScheduleProvider.overrideWith((ref) => schedule),
         // Database
         dbProvider.overrideWithValue(db),
         // Pre-loaded data (avoids empty-flash on first frame)

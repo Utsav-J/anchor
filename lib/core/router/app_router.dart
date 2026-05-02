@@ -8,8 +8,11 @@ import '../../features/me/manage_focus_screen.dart';
 import '../../features/me/me_screen.dart';
 import '../../features/my_week/my_week_screen.dart';
 import '../../features/onboarding/focus_filter/focus_filter_screen.dart';
+import '../../features/onboarding/intro/intro_screen.dart';
+import '../../features/onboarding/narrative/narrative_screen.dart';
 import '../../features/onboarding/quickies/quickies_onboarding_screen.dart';
 import '../../features/ownership_reveal/ownership_reveal_screen.dart';
+import '../../features/settings/schedule_settings_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../shared/widgets/anchor_shell.dart';
 
@@ -79,9 +82,27 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/onboarding/intro',
+        name: 'onboardingIntro',
+        builder: (context, state) => const IntroScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/onboarding/narrative',
+        name: 'onboardingNarrative',
+        builder: (context, state) => const NarrativeScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: '/onboarding/focus-filter',
         name: 'focusFilter',
         builder: (context, state) => const FocusFilterScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/settings/schedule',
+        name: 'scheduleSettings',
+        builder: (context, state) => const ScheduleSettingsScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

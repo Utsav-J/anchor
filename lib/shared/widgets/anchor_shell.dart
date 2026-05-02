@@ -16,8 +16,8 @@ class AnchorShell extends StatefulWidget {
 }
 
 /// Matched to [LGBottomBar] sizing in this shell.
-var _kLiquidNavBarHeight = 96.0.h;
-var _kLiquidNavVerticalPadding = 12.0;
+var _kLiquidNavBarHeight = 80.0.h;
+var _kLiquidNavVerticalPadding = 0.0;
 
 class _AnchorShellState extends State<AnchorShell> {
   /// Incremented per tab on tap so [NavTabRiveIcon] replays once.
@@ -61,28 +61,28 @@ class _AnchorShellState extends State<AnchorShell> {
               child: Padding(
                 padding: EdgeInsets.only(bottom: bottomSafe),
                 child: FractionallySizedBox(
-                  widthFactor: 0.8,
+                  widthFactor: 0.75,
                   child: LGBottomBar(
                     quality: LGQuality.premium,
                     isSearch: false,
-                    showLabel: false,
+                    showLabel: true,
                     barHeight: _kLiquidNavBarHeight,
-                    barBorderRadius: 28,
-                    horizontalPadding: 14,
+                    barBorderRadius: 32,
+                    horizontalPadding: 0,
                     verticalPadding: _kLiquidNavVerticalPadding,
-                    blendAmount: 1,
+                    blendAmount: 5,
                     iconSize: iconSize,
-                    indicatorColor: AppTheme.onSurface.withValues(alpha: 0.08),
+                    indicatorColor: AppTheme.onSurface.withValues(alpha: 0.05),
                     glassSettings: LiquidGlassSettings(
-                      thickness: 26,
-                      blur: 10,
-                      chromaticAberration: 0.22,
+                      thickness: 32,
+                      blur: 8,
+                      chromaticAberration: 0.5,
                       lightIntensity: 0.5,
                       refractiveIndex: 1.52,
                       saturation: 0.62,
-                      ambientStrength: 1,
+                      ambientStrength: 10,
                       lightAngle: 0.25 * 3.141592653589793,
-                      glassColor: const Color(0x5AFFF8F6),
+                      glassColor: const Color.fromARGB(90, 220, 115, 86),
                     ),
                     indicatorSettings: const LiquidGlassSettings(
                       thickness: 18,
