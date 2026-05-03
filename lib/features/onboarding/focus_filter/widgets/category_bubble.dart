@@ -157,7 +157,7 @@ class CategoryBubble extends StatelessWidget {
   static Gradient liquidGradientFor(String name, {required bool selected}) {
     final spec = categoryGlassSpecs[_idx(name)];
     final surface = AppTheme.surfaceContainerLow;
-    final mute = selected ? 0.0 : 0.34;
+    final mute = selected ? 0.0 : 0.52;
     final colors = [for (final c in spec.colors) Color.lerp(c, surface, mute)!];
     return RadialGradient(
       center: spec.radialCenter,

@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/user_schedule.dart';
 import '../../../shared/widgets/liquid_glass_action_button.dart';
 import '../onboarding_progress.dart';
+import '../onboarding_timing.dart';
 
 // ── Gradient palettes ────────────────────────────────────────────────────────
 const _kMorningColors = [
@@ -50,30 +51,62 @@ class IntroScreen extends ConsumerStatefulWidget {
   ConsumerState<IntroScreen> createState() => _IntroScreenState();
 }
 
-class _IntroScreenState extends ConsumerState<IntroScreen> {
+class _IntroScreenState extends ConsumerState<IntroScreen>
+    with SingleTickerProviderStateMixin {
   final _pageController = PageController();
   int _step = 0;
   bool _skipConfirm = false;
+  double _cardScale = 1.0;
+
+  // Slide-up entry
+  late final AnimationController _entryCtrl;
+  late final Animation<Offset> _entrySlide;
+  late final Animation<double> _entryFade;
 
   // Morning
   int _wakeH = 7, _wakeM = 0;
   int _leaveH = 9, _leaveM = 0;
 
-  // Evening
-  int _returnH = 19, _returnM = 0;
+  // Evening — defaults per design doc
+  int _returnH = 18, _returnM = 0;
   int _sleepH = 23, _sleepM = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _entryCtrl = AnimationController(
+      vsync: this,
+      duration: OnboardingTiming.inputSlideUp,
+    );
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
+    _entryFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut),
+    );
+    _entryCtrl.forward();
+  }
+
+  @override
   void dispose() {
+    _entryCtrl.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
-  void _goToEvening() {
-    setState(() => _step = 1);
+  Future<void> _goToEvening() async {
+    // Tactile card compress
+    setState(() => _cardScale = 0.97);
+    await Future<void>.delayed(OnboardingTiming.inputCardCompress);
+    if (!mounted) return;
+    setState(() {
+      _cardScale = 1.0;
+      _step = 1;
+    });
     _pageController.animateToPage(
       1,
-      duration: const Duration(milliseconds: 450),
+      duration: OnboardingTiming.inputPageTransition,
       curve: Curves.easeInOutCubic,
     );
   }
@@ -82,7 +115,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen> {
     setState(() => _step = 0);
     _pageController.animateToPage(
       0,
-      duration: const Duration(milliseconds: 450),
+      duration: OnboardingTiming.inputPageTransition,
       curve: Curves.easeInOutCubic,
     );
   }
@@ -132,7 +165,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen> {
           children: [
             // ── Animated gradient background ─────────────────────────────
             AnimatedContainer(
-              duration: const Duration(milliseconds: 600),
+              duration: OnboardingTiming.inputBackgroundShift,
               curve: Curves.easeInOut,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -157,34 +190,44 @@ class _IntroScreenState extends ConsumerState<IntroScreen> {
                 color: AppTheme.primary,
               ),
             ),
-            // ── Content ──────────────────────────────────────────────────
-            SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Row(
-                      children: [
-                        _StepDots(step: _step),
-                        const Spacer(),
-                        _SkipButton(
-                          confirm: _skipConfirm,
-                          onTap: _handleSkip,
+            // ── Content with slide-up entry ──────────────────────────────
+            SlideTransition(
+              position: _entrySlide,
+              child: FadeTransition(
+                opacity: _entryFade,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: Row(
+                          children: [
+                            _StepDots(step: _step),
+                            const Spacer(),
+                            _SkipButton(
+                              confirm: _skipConfirm,
+                              onTap: _handleSkip,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Expanded(
+                        child: AnimatedScale(
+                          scale: _cardScale,
+                          duration: OnboardingTiming.inputCardCompress,
+                          child: PageView(
+                            controller: _pageController,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              _buildMorningPage(),
+                              _buildEveningPage(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: PageView(
-                      controller: _pageController,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _buildMorningPage(),
-                        _buildEveningPage(),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -222,8 +265,10 @@ class _IntroScreenState extends ConsumerState<IntroScreen> {
             hour: _wakeH,
             minute: _wakeM,
             isMorningStep: true,
-            onHourInc: () =>
-                setState(() => _wakeH = (_wakeH < 11) ? _wakeH + 1 : _wakeH),
+            onHourInc: () => setState(() {
+              final max = _leaveH - 1;
+              _wakeH = (_wakeH < max) ? _wakeH + 1 : _wakeH;
+            }),
             onHourDec: () =>
                 setState(() => _wakeH = (_wakeH > 4) ? _wakeH - 1 : _wakeH),
             onMinInc: () => setState(() => _wakeM = _nextMin(_wakeM)),
@@ -237,8 +282,10 @@ class _IntroScreenState extends ConsumerState<IntroScreen> {
             isMorningStep: true,
             onHourInc: () => setState(
                 () => _leaveH = (_leaveH < 12) ? _leaveH + 1 : _leaveH),
-            onHourDec: () => setState(
-                () => _leaveH = (_leaveH > 5) ? _leaveH - 1 : _leaveH),
+            onHourDec: () => setState(() {
+              final min = _wakeH + 1;
+              _leaveH = (_leaveH > min) ? _leaveH - 1 : _leaveH;
+            }),
             onMinInc: () => setState(() => _leaveM = _nextMin(_leaveM)),
             onMinDec: () => setState(() => _leaveM = _prevMin(_leaveM)),
           ),
@@ -270,7 +317,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'The window that\'s truly yours.',
+            'The hours the world hands back to you.',
             style: AppTheme.inter(
               fontSize: 14,
               color: AppTheme.onSurface.withValues(alpha: 0.55),
@@ -417,7 +464,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen> {
         _ArrowTap(icon: Icons.keyboard_arrow_up_rounded, onTap: onInc),
         const SizedBox(height: 4),
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
+          duration: OnboardingTiming.inputDigitSwitch,
           transitionBuilder: (child, animation) => SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0, 0.25),
@@ -480,7 +527,7 @@ class _StepDots extends StatelessWidget {
       children: List.generate(2, (i) {
         final active = i == step;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: OnboardingTiming.inputDotTransition,
           curve: Curves.easeInOut,
           margin: const EdgeInsets.symmetric(horizontal: 3),
           width: active ? 20 : 8,
@@ -511,7 +558,7 @@ class _SkipButton extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: OnboardingTiming.inputDotTransition,
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
@@ -523,7 +570,7 @@ class _SkipButton extends StatelessWidget {
               ),
             ),
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
+              duration: OnboardingTiming.inputSkipSwitch,
               transitionBuilder: (child, animation) => FadeTransition(
                 opacity: animation,
                 child: SlideTransition(
@@ -560,7 +607,7 @@ class _AmPmBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
+      duration: OnboardingTiming.inputAmPmSwitch,
       child: Text(
         label,
         key: ValueKey(label),

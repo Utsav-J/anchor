@@ -37,6 +37,7 @@ dependencies:
   flutter_launcher_icons: ^0.14.4
   rive: ^0.13.20
   rive_animated_icon: ^2.0.5
+  flutter_confetti: ^0.5.1
 
 dev_dependencies:
   flutter_test:

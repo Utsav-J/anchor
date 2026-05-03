@@ -38,7 +38,7 @@ class _FocusFilterScreenState extends ConsumerState<FocusFilterScreen> {
     await OnboardingProgress.saveStage(OnboardingStage.quickies);
     if (!mounted) return;
 
-    context.go('/onboarding/quickies');
+    context.go('/onboarding/bridge');
   }
 
   @override
@@ -136,7 +136,7 @@ class _FocusHeaderGlass extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tap to rank your priorities. Skip the ones you want to rest on.',
+                  'Tap to rank what matters. Leave the rest for later.',
                   style: AppTheme.inter(
                     fontSize: 13,
                     color: AppTheme.onSurface.withValues(alpha: 0.55),

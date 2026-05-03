@@ -3,16 +3,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 const kOnboardingStagePrefKey = 'anchor.onboarding_stage';
 
 enum OnboardingStage {
-  intro,     // time input + narrative (new users start here)
+  opening,   // opening cinematic (brand new users start here)
+  intro,     // time input + narrative
   focus,     // focus filter
   quickies,  // quickies selection
+  reveal,    // ownership reveal + brand arrival
   complete;  // done
 
   static OnboardingStage fromString(String? value) {
-    if (value == null) return OnboardingStage.intro;
+    if (value == null) return OnboardingStage.opening;
     return OnboardingStage.values.firstWhere(
       (stage) => stage.name == value,
-      orElse: () => OnboardingStage.intro,
+      orElse: () => OnboardingStage.opening,
     );
   }
 }
@@ -32,9 +34,10 @@ class OnboardingProgress {
     required OnboardingStage stage,
     required bool hasSchedule,
   }) {
-    if (!hasSchedule && !hasFocusPriorities) return '/onboarding/intro';
+    if (!hasSchedule && !hasFocusPriorities) return '/onboarding/opening';
     if (!hasFocusPriorities) return '/onboarding/focus-filter';
     if (stage == OnboardingStage.quickies) return '/onboarding/quickies';
+    if (stage == OnboardingStage.reveal) return '/onboarding/reveal';
     return '/home';
   }
 

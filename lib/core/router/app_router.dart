@@ -7,10 +7,14 @@ import '../../features/home/home_screen.dart';
 import '../../features/me/manage_focus_screen.dart';
 import '../../features/me/me_screen.dart';
 import '../../features/my_week/my_week_screen.dart';
+import '../../features/onboarding/arrival/brand_arrival_screen.dart';
+import '../../features/onboarding/bridge/bridge_screen.dart';
 import '../../features/onboarding/focus_filter/focus_filter_screen.dart';
 import '../../features/onboarding/intro/intro_screen.dart';
 import '../../features/onboarding/narrative/narrative_screen.dart';
+import '../../features/onboarding/opening/opening_cinematic_screen.dart';
 import '../../features/onboarding/quickies/quickies_onboarding_screen.dart';
+import '../../features/onboarding/reveal/onboarding_reveal_screen.dart';
 import '../../features/ownership_reveal/ownership_reveal_screen.dart';
 import '../../features/settings/schedule_settings_screen.dart';
 import '../../features/settings/settings_screen.dart';
@@ -82,6 +86,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/onboarding/opening',
+        name: 'onboardingOpening',
+        builder: (context, state) => const OpeningCinematicScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: '/onboarding/intro',
         name: 'onboardingIntro',
         builder: (context, state) => const IntroScreen(),
@@ -106,9 +116,27 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/onboarding/bridge',
+        name: 'onboardingBridge',
+        builder: (context, state) => const BridgeScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: '/onboarding/quickies',
         name: 'quickiesOnboarding',
         builder: (context, state) => const QuickiesOnboardingScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/onboarding/reveal',
+        name: 'onboardingReveal',
+        builder: (context, state) => const OnboardingRevealScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/onboarding/arrival',
+        name: 'onboardingArrival',
+        builder: (context, state) => const BrandArrivalScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

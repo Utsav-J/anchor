@@ -11,7 +11,6 @@ import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/liquid_glass_action_button.dart';
 import '../focus_filter/focus_filter_notifier.dart';
 import '../focus_filter/widgets/category_bubble.dart';
-import '../onboarding_progress.dart';
 import 'quick_activity_catalog.dart';
 import 'quickies_onboarding_notifier.dart';
 
@@ -70,13 +69,36 @@ class QuickiesOnboardingScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          'Tap a focus bubble to pick quick activities.',
+                        RichText(
                           textAlign: TextAlign.center,
-                          style: AppTheme.inter(
-                            fontSize: 14,
-                            height: 1.35,
-                            color: AppTheme.textMuted,
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Let\'s show you how to set up quick activities\n',
+                                style: AppTheme.inter(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                  height: 1.5,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Start with ${categories.isNotEmpty ? categories.first.name : 'your top pick'}.',
+                                style: AppTheme.inter(
+                                  fontSize: 15,
+                                  weight: FontWeight.w600,
+                                  color: AppTheme.onSurface,
+                                  height: 1.5,
+                                ),
+                              ),
+                              TextSpan(
+                                text: '\nYou can fill in the rest in the app.',
+                                style: AppTheme.inter(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         AnimatedSwitcher(
@@ -110,9 +132,12 @@ class QuickiesOnboardingScreen extends ConsumerWidget {
                                 category: categories[i],
                                 priority: i + 1,
                                 totalSelected: categories.length,
-                                onTap: () => quickiesNotifier.openCategory(
-                                  categories[i].name,
-                                ),
+                                isP1: i == 0,
+                                onTap: i == 0
+                                    ? () => quickiesNotifier.openCategory(
+                                          categories[i].name,
+                                        )
+                                    : null,
                               ),
                           ],
                         ),
@@ -154,17 +179,15 @@ class QuickiesOnboardingScreen extends ConsumerWidget {
     }
 
     ref.read(onboardingQuickTemplatesProvider.notifier).state = templates;
-    await OnboardingProgress.saveStage(OnboardingStage.complete);
 
     if (context.mounted) {
-      context.go('/home');
+      context.go('/onboarding/reveal');
     }
   }
 
   Future<void> _skipOnboarding(BuildContext context) async {
-    await OnboardingProgress.saveStage(OnboardingStage.complete);
     if (context.mounted) {
-      context.go('/home');
+      context.go('/onboarding/reveal');
     }
   }
 }
@@ -176,13 +199,15 @@ class _QuickiesCategoryCircle extends StatelessWidget {
     required this.category,
     required this.priority,
     required this.totalSelected,
+    required this.isP1,
     required this.onTap,
   });
 
   final QuickActivityCategory category;
   final int priority;
   final int totalSelected;
-  final VoidCallback onTap;
+  final bool isP1;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -190,14 +215,20 @@ class _QuickiesCategoryCircle extends StatelessWidget {
       (m) => m.name == category.name,
     );
 
-    return Hero(
-      tag: 'onboarding-category-${category.name}',
-      child: CategoryBubble(
-        meta: meta,
-        priority: priority,
-        totalSelected: totalSelected,
-        onTap: onTap,
-        onLongPress: onTap,
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 300),
+      opacity: isP1 ? 1.0 : 0.4,
+      child: Hero(
+        tag: 'onboarding-category-${category.name}',
+        child: CategoryBubble(
+          meta: meta,
+          priority: isP1 ? priority : null,
+          totalSelected: totalSelected,
+          size: isP1 ? kSelectedCategoryCircleSize : kCategoryCircleSize * 0.75,
+          selectedSize: kSelectedCategoryCircleSize,
+          onTap: onTap ?? () {},
+          onLongPress: onTap ?? () {},
+        ),
       ),
     );
   }
@@ -539,7 +570,7 @@ class _QuickiesBottomBar extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               selectedCount == 0
-                  ? 'Add a few quick activities or skip for now'
+                  ? 'Even 2–3 activities is enough to begin.'
                   : '$selectedCount quick activities selected',
               textAlign: TextAlign.center,
               style: AppTheme.inter(
@@ -560,7 +591,7 @@ class _QuickiesBottomBar extends StatelessWidget {
               const SizedBox(width: 12),
               LiquidGlassCircleButton(
                 icon: Icons.skip_next_rounded,
-                semanticLabel: 'Skip quickies onboarding',
+                semanticLabel: 'Fill in later',
                 onTap: onSkip,
               ),
             ],
