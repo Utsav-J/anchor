@@ -10,18 +10,6 @@ import '../../../shared/widgets/liquid_glass_action_button.dart';
 import '../onboarding_progress.dart';
 import '../onboarding_timing.dart';
 
-// ── Gradient palettes ────────────────────────────────────────────────────────
-const _kMorningColors = [
-  Color(0xFFFFF6E8),
-  Color(0xFFFFDFA0),
-  Color(0xFFFFC060),
-];
-const _kEveningColors = [
-  Color(0xFFFFEEE4),
-  Color(0xFFFFAA78),
-  Color(0xFFDD4A18),
-];
-
 // ── Hour/minute helpers ───────────────────────────────────────────────────────
 String _hourDisplay(int hour) {
   if (hour == 0 || hour == 24) return '12';
@@ -51,17 +39,19 @@ class IntroScreen extends ConsumerStatefulWidget {
   ConsumerState<IntroScreen> createState() => _IntroScreenState();
 }
 
-class _IntroScreenState extends ConsumerState<IntroScreen>
-    with SingleTickerProviderStateMixin {
+class _IntroScreenState extends ConsumerState<IntroScreen> {
   final _pageController = PageController();
   int _step = 0;
   bool _skipConfirm = false;
   double _cardScale = 1.0;
 
-  // Slide-up entry
-  late final AnimationController _entryCtrl;
-  late final Animation<Offset> _entrySlide;
-  late final Animation<double> _entryFade;
+  // Per-page stagger state
+  bool _morningShowHeading = false;
+  bool _morningShowSubtext = false;
+  bool _morningShowInputs = false;
+  bool _eveningShowHeading = false;
+  bool _eveningShowSubtext = false;
+  bool _eveningShowInputs = false;
 
   // Morning
   int _wakeH = 7, _wakeM = 0;
@@ -74,50 +64,80 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
   @override
   void initState() {
     super.initState();
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: OnboardingTiming.inputSlideUp,
-    );
-    _entrySlide = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
-    _entryFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut),
-    );
-    _entryCtrl.forward();
+    _scheduleStagger(isMorning: true);
   }
 
   @override
   void dispose() {
-    _entryCtrl.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
+  void _scheduleStagger({required bool isMorning}) {
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      setState(() {
+        if (isMorning) {
+          _morningShowHeading = true;
+        } else {
+          _eveningShowHeading = true;
+        }
+      });
+    });
+    Future.delayed(const Duration(milliseconds: 430), () {
+      if (!mounted) return;
+      setState(() {
+        if (isMorning) {
+          _morningShowSubtext = true;
+        } else {
+          _eveningShowSubtext = true;
+        }
+      });
+    });
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() {
+        if (isMorning) {
+          _morningShowInputs = true;
+        } else {
+          _eveningShowInputs = true;
+        }
+      });
+    });
+  }
+
   Future<void> _goToEvening() async {
-    // Tactile card compress
     setState(() => _cardScale = 0.97);
     await Future<void>.delayed(OnboardingTiming.inputCardCompress);
     if (!mounted) return;
     setState(() {
       _cardScale = 1.0;
       _step = 1;
+      _eveningShowHeading = false;
+      _eveningShowSubtext = false;
+      _eveningShowInputs = false;
     });
     _pageController.animateToPage(
       1,
       duration: OnboardingTiming.inputPageTransition,
       curve: Curves.easeInOutCubic,
     );
+    _scheduleStagger(isMorning: false);
   }
 
   void _goToMorning() {
-    setState(() => _step = 0);
+    setState(() {
+      _step = 0;
+      _morningShowHeading = false;
+      _morningShowSubtext = false;
+      _morningShowInputs = false;
+    });
     _pageController.animateToPage(
       0,
       duration: OnboardingTiming.inputPageTransition,
       curve: Curves.easeInOutCubic,
     );
+    _scheduleStagger(isMorning: true);
   }
 
   Future<void> _proceed() async {
@@ -144,14 +164,14 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
 
   // ── Sleep hour cycling: 20 PM → 23 PM → 0 AM → 2 AM (capped) ──────────────
   void _incSleepH() => setState(() {
-        if (_sleepH == 2) return;
-        _sleepH = _sleepH == 23 ? 0 : _sleepH + 1;
-      });
+    if (_sleepH == 2) return;
+    _sleepH = _sleepH == 23 ? 0 : _sleepH + 1;
+  });
 
   void _decSleepH() => setState(() {
-        if (_sleepH == 20) return;
-        _sleepH = _sleepH == 0 ? 23 : _sleepH - 1;
-      });
+    if (_sleepH == 20) return;
+    _sleepH = _sleepH == 0 ? 23 : _sleepH - 1;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -163,71 +183,51 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
       child: Scaffold(
         body: Stack(
           children: [
-            // ── Animated gradient background ─────────────────────────────
-            AnimatedContainer(
-              duration: OnboardingTiming.inputBackgroundShift,
-              curve: Curves.easeInOut,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: _step == 0 ? _kMorningColors : _kEveningColors,
+            // Night image (base layer — always present)
+            Positioned.fill(
+              child: Image.asset(
+                'assets/onboarding/image.png',
+                fit: BoxFit.cover,
+              ),
+            ),
+            // Morning image crossfades out when going to evening
+            Positioned.fill(
+              child: AnimatedOpacity(
+                opacity: _step == 0 ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeInOut,
+                child: Image.asset(
+                  'assets/onboarding/morning.png',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-            // ── Decorative blobs ─────────────────────────────────────────
-            const Positioned(
-              top: -90,
-              right: -90,
-              child: _GlowBlob(size: 280, alpha: 0.18),
-            ),
-            Positioned(
-              bottom: -60,
-              left: -70,
-              child: _GlowBlob(
-                size: 220,
-                alpha: 0.12,
-                color: AppTheme.primary,
-              ),
-            ),
-            // ── Content with slide-up entry ──────────────────────────────
-            SlideTransition(
-              position: _entrySlide,
-              child: FadeTransition(
-                opacity: _entryFade,
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                        child: Row(
-                          children: [
-                            _StepDots(step: _step),
-                            const Spacer(),
-                            _SkipButton(
-                              confirm: _skipConfirm,
-                              onTap: _handleSkip,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: AnimatedScale(
-                          scale: _cardScale,
-                          duration: OnboardingTiming.inputCardCompress,
-                          child: PageView(
-                            controller: _pageController,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: [
-                              _buildMorningPage(),
-                              _buildEveningPage(),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+            // Content
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Row(
+                      children: [
+                        _StepDots(step: _step, isNight: _step == 1),
+                        const Spacer(),
+                        _SkipButton(confirm: _skipConfirm, onTap: _handleSkip),
+                      ],
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: AnimatedScale(
+                      scale: _cardScale,
+                      duration: OnboardingTiming.inputCardCompress,
+                      child: PageView(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [_buildMorningPage(), _buildEveningPage()],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -244,56 +244,69 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Your morning',
-            style: AppTheme.notoSerif(
-              fontSize: 30,
-              weight: FontWeight.w700,
+          _AnimatedEntry(
+            visible: _morningShowHeading,
+            child: Text(
+              'Your morning',
+              style: AppTheme.notoSerif(fontSize: 30, weight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            'The quiet hours before the world claims you.',
-            style: AppTheme.inter(
-              fontSize: 14,
-              color: AppTheme.onSurface.withValues(alpha: 0.55),
+          _AnimatedEntry(
+            visible: _morningShowSubtext,
+            child: Text(
+              'The quiet hours before the world claims you.',
+              style: AppTheme.notoSerif(
+                fontSize: 14,
+                color: AppTheme.onSurface.withValues(alpha: 0.55),
+              ),
             ),
           ),
           const SizedBox(height: 32),
-          _buildTimeCard(
-            label: 'Wake up',
-            hour: _wakeH,
-            minute: _wakeM,
-            isMorningStep: true,
-            onHourInc: () => setState(() {
-              final max = _leaveH - 1;
-              _wakeH = (_wakeH < max) ? _wakeH + 1 : _wakeH;
-            }),
-            onHourDec: () =>
-                setState(() => _wakeH = (_wakeH > 4) ? _wakeH - 1 : _wakeH),
-            onMinInc: () => setState(() => _wakeM = _nextMin(_wakeM)),
-            onMinDec: () => setState(() => _wakeM = _prevMin(_wakeM)),
-          ),
-          const SizedBox(height: 16),
-          _buildTimeCard(
-            label: 'Leave for work',
-            hour: _leaveH,
-            minute: _leaveM,
-            isMorningStep: true,
-            onHourInc: () => setState(
-                () => _leaveH = (_leaveH < 12) ? _leaveH + 1 : _leaveH),
-            onHourDec: () => setState(() {
-              final min = _wakeH + 1;
-              _leaveH = (_leaveH > min) ? _leaveH - 1 : _leaveH;
-            }),
-            onMinInc: () => setState(() => _leaveM = _nextMin(_leaveM)),
-            onMinDec: () => setState(() => _leaveM = _prevMin(_leaveM)),
-          ),
-          const SizedBox(height: 36),
-          LiquidGlassActionButton(
-            label: 'Next',
-            icon: Icons.arrow_forward_rounded,
-            onTap: _goToEvening,
+          _AnimatedEntry(
+            visible: _morningShowInputs,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTimeCard(
+                  label: 'What time do you wake up?',
+                  hour: _wakeH,
+                  minute: _wakeM,
+                  isMorningStep: true,
+                  onHourInc: () => setState(() {
+                    final max = _leaveH - 1;
+                    _wakeH = (_wakeH < max) ? _wakeH + 1 : _wakeH;
+                  }),
+                  onHourDec: () => setState(
+                    () => _wakeH = (_wakeH > 4) ? _wakeH - 1 : _wakeH,
+                  ),
+                  onMinInc: () => setState(() => _wakeM = _nextMin(_wakeM)),
+                  onMinDec: () => setState(() => _wakeM = _prevMin(_wakeM)),
+                ),
+                const SizedBox(height: 16),
+                _buildTimeCard(
+                  label: 'What time do you leave for work?',
+                  hour: _leaveH,
+                  minute: _leaveM,
+                  isMorningStep: true,
+                  onHourInc: () => setState(
+                    () => _leaveH = (_leaveH < 12) ? _leaveH + 1 : _leaveH,
+                  ),
+                  onHourDec: () => setState(() {
+                    final min = _wakeH + 1;
+                    _leaveH = (_leaveH > min) ? _leaveH - 1 : _leaveH;
+                  }),
+                  onMinInc: () => setState(() => _leaveM = _nextMin(_leaveM)),
+                  onMinDec: () => setState(() => _leaveM = _prevMin(_leaveM)),
+                ),
+                const SizedBox(height: 36),
+                LiquidGlassActionButton(
+                  label: 'Next',
+                  icon: Icons.arrow_forward_rounded,
+                  onTap: _goToEvening,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -308,62 +321,79 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Your evening',
-            style: AppTheme.notoSerif(
-              fontSize: 30,
-              weight: FontWeight.w700,
+          _AnimatedEntry(
+            visible: _eveningShowHeading,
+            child: Text(
+              'Your evening',
+              style: AppTheme.notoSerif(
+                fontSize: 30,
+                weight: FontWeight.w700,
+                color: Colors.white.withValues(alpha: 0.92),
+              ),
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            'The hours the world hands back to you.',
-            style: AppTheme.inter(
-              fontSize: 14,
-              color: AppTheme.onSurface.withValues(alpha: 0.55),
+          _AnimatedEntry(
+            visible: _eveningShowSubtext,
+            child: Text(
+              'The hours the world hands back to you.',
+              style: AppTheme.inter(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
             ),
           ),
           const SizedBox(height: 32),
-          _buildTimeCard(
-            label: 'Get home from work',
-            hour: _returnH,
-            minute: _returnM,
-            isMorningStep: false,
-            onHourInc: () => setState(
-                () => _returnH = (_returnH < 22) ? _returnH + 1 : _returnH),
-            onHourDec: () => setState(
-                () => _returnH = (_returnH > 12) ? _returnH - 1 : _returnH),
-            onMinInc: () => setState(() => _returnM = _nextMin(_returnM)),
-            onMinDec: () => setState(() => _returnM = _prevMin(_returnM)),
-          ),
-          const SizedBox(height: 16),
-          _buildTimeCard(
-            label: 'Go to sleep',
-            hour: _sleepH,
-            minute: _sleepM,
-            isMorningStep: false,
-            onHourInc: _incSleepH,
-            onHourDec: _decSleepH,
-            onMinInc: () => setState(() => _sleepM = _nextMin(_sleepM)),
-            onMinDec: () => setState(() => _sleepM = _prevMin(_sleepM)),
-          ),
-          const SizedBox(height: 36),
-          Row(
-            children: [
-              LiquidGlassCircleButton(
-                icon: Icons.arrow_back_rounded,
-                semanticLabel: 'Back to morning',
-                onTap: _goToMorning,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: LiquidGlassActionButton(
-                  label: 'Show me',
-                  icon: Icons.play_arrow_rounded,
-                  onTap: _proceed,
+          _AnimatedEntry(
+            visible: _eveningShowInputs,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTimeCard(
+                  label: 'Get home from work',
+                  hour: _returnH,
+                  minute: _returnM,
+                  isMorningStep: false,
+                  onHourInc: () => setState(
+                    () => _returnH = (_returnH < 22) ? _returnH + 1 : _returnH,
+                  ),
+                  onHourDec: () => setState(
+                    () => _returnH = (_returnH > 12) ? _returnH - 1 : _returnH,
+                  ),
+                  onMinInc: () => setState(() => _returnM = _nextMin(_returnM)),
+                  onMinDec: () => setState(() => _returnM = _prevMin(_returnM)),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                _buildTimeCard(
+                  label: 'When do you go to bed?',
+                  hour: _sleepH,
+                  minute: _sleepM,
+                  isMorningStep: false,
+                  onHourInc: _incSleepH,
+                  onHourDec: _decSleepH,
+                  onMinInc: () => setState(() => _sleepM = _nextMin(_sleepM)),
+                  onMinDec: () => setState(() => _sleepM = _prevMin(_sleepM)),
+                ),
+                const SizedBox(height: 36),
+                Row(
+                  children: [
+                    LiquidGlassCircleButton(
+                      icon: Icons.arrow_back_rounded,
+                      semanticLabel: 'Back to morning',
+                      onTap: _goToMorning,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: LiquidGlassActionButton(
+                        label: 'Show me',
+                        icon: Icons.play_arrow_rounded,
+                        onTap: _proceed,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -383,18 +413,19 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
     required VoidCallback onMinDec,
   }) {
     final amPm = _amPmLabel(hour: hour, isMorningStep: isMorningStep);
+    final isNight = !isMorningStep;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.28),
+            color: Colors.white.withValues(alpha: 0.23),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.55),
+              color: Colors.white.withValues(alpha: isNight ? 0.18 : 0.55),
               width: 1.5,
             ),
             boxShadow: [
@@ -409,22 +440,25 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                label.toUpperCase(),
+                label,
                 style: AppTheme.inter(
                   fontSize: 11,
                   letterSpacing: 1.4,
                   weight: FontWeight.w600,
-                  color: AppTheme.textMuted,
+                  color: isNight
+                      ? Colors.white.withValues(alpha: 0.55)
+                      : AppTheme.textMuted,
                 ),
               ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildTimeBox(
+                  _TimeBox(
                     value: _hourDisplay(hour),
                     onInc: onHourInc,
                     onDec: onHourDec,
+                    isNight: isNight,
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -433,17 +467,20 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                       style: AppTheme.notoSerif(
                         fontSize: 44,
                         weight: FontWeight.w300,
-                        color: AppTheme.onSurface.withValues(alpha: 0.3),
+                        color: isNight
+                            ? Colors.white.withValues(alpha: 0.35)
+                            : AppTheme.onSurface.withValues(alpha: 0.3),
                       ),
                     ),
                   ),
-                  _buildTimeBox(
+                  _TimeBox(
                     value: _minDisplay(minute),
                     onInc: onMinInc,
                     onDec: onMinDec,
+                    isNight: isNight,
                   ),
                   const SizedBox(width: 16),
-                  _AmPmBadge(label: amPm),
+                  _AmPmBadge(label: amPm, isNight: isNight),
                 ],
               ),
             ],
@@ -452,73 +489,122 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
       ),
     );
   }
+}
 
-  Widget _buildTimeBox({
-    required String value,
-    required VoidCallback onInc,
-    required VoidCallback onDec,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _ArrowTap(icon: Icons.keyboard_arrow_up_rounded, onTap: onInc),
-        const SizedBox(height: 4),
-        AnimatedSwitcher(
-          duration: OnboardingTiming.inputDigitSwitch,
-          transitionBuilder: (child, animation) => SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.25),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            ),
-            child: FadeTransition(opacity: animation, child: child),
+// ── Staggered entry animation ─────────────────────────────────────────────────
+
+class _AnimatedEntry extends StatelessWidget {
+  const _AnimatedEntry({required this.visible, required this.child});
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      opacity: visible ? 1.0 : 0.0,
+      child: AnimatedSlide(
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOut,
+        offset: visible ? Offset.zero : const Offset(0, 0.08),
+        child: child,
+      ),
+    );
+  }
+}
+
+// ── Scrollable time digit box ─────────────────────────────────────────────────
+
+class _TimeBox extends StatefulWidget {
+  const _TimeBox({
+    required this.value,
+    required this.onInc,
+    required this.onDec,
+    this.isNight = false,
+  });
+
+  final String value;
+  final VoidCallback onInc;
+  final VoidCallback onDec;
+  final bool isNight;
+
+  @override
+  State<_TimeBox> createState() => _TimeBoxState();
+}
+
+class _TimeBoxState extends State<_TimeBox> {
+  double _drag = 0;
+  static const _kThreshold = 18.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: (d) {
+        _drag += d.delta.dy;
+        if (_drag > _kThreshold) {
+          // drag down = later time = increment
+          widget.onInc();
+          _drag = 0;
+        } else if (_drag < -_kThreshold) {
+          // drag up = earlier time = decrement
+          widget.onDec();
+          _drag = 0;
+        }
+      },
+      onVerticalDragEnd: (_) => _drag = 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Up = earlier time = decrement
+          _ArrowTap(
+            icon: Icons.keyboard_arrow_up_rounded,
+            onTap: widget.onDec,
+            isNight: widget.isNight,
           ),
-          child: Text(
-            value,
-            key: ValueKey(value),
-            style: AppTheme.notoSerif(
-              fontSize: 46,
-              weight: FontWeight.w300,
+          const SizedBox(height: 4),
+          AnimatedSwitcher(
+            duration: OnboardingTiming.inputDigitSwitch,
+            transitionBuilder: (child, animation) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.25),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOut),
+              ),
+              child: FadeTransition(opacity: animation, child: child),
+            ),
+            child: Text(
+              widget.value,
+              key: ValueKey(widget.value),
+              style: AppTheme.notoSerif(
+                fontSize: 46,
+                weight: FontWeight.w300,
+                color: widget.isNight ? Colors.white : AppTheme.onSurface,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        _ArrowTap(icon: Icons.keyboard_arrow_down_rounded, onTap: onDec),
-      ],
+          const SizedBox(height: 4),
+          // Down = later time = increment
+          _ArrowTap(
+            icon: Icons.keyboard_arrow_down_rounded,
+            onTap: widget.onInc,
+            isNight: widget.isNight,
+          ),
+        ],
+      ),
     );
   }
 }
 
 // ── Small private widgets ─────────────────────────────────────────────────────
 
-class _GlowBlob extends StatelessWidget {
-  const _GlowBlob({
-    required this.size,
-    required this.alpha,
-    this.color = Colors.white,
-  });
-
-  final double size;
-  final double alpha;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: alpha),
-      ),
-    );
-  }
-}
-
 class _StepDots extends StatelessWidget {
-  const _StepDots({required this.step});
+  const _StepDots({required this.step, this.isNight = false});
   final int step;
+  final bool isNight;
 
   @override
   Widget build(BuildContext context) {
@@ -534,8 +620,8 @@ class _StepDots extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(
             color: active
-                ? AppTheme.primary
-                : AppTheme.onSurface.withValues(alpha: 0.18),
+                ? (isNight ? Colors.white : AppTheme.primary)
+                : Colors.white.withValues(alpha: isNight ? 0.35 : 0.18),
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -559,8 +645,7 @@ class _SkipButton extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: AnimatedContainer(
             duration: OnboardingTiming.inputDotTransition,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: confirm ? 0.4 : 0.2),
               borderRadius: BorderRadius.circular(20),
@@ -601,8 +686,9 @@ class _SkipButton extends StatelessWidget {
 }
 
 class _AmPmBadge extends StatelessWidget {
-  const _AmPmBadge({required this.label});
+  const _AmPmBadge({required this.label, this.isNight = false});
   final String label;
+  final bool isNight;
 
   @override
   Widget build(BuildContext context) {
@@ -614,7 +700,9 @@ class _AmPmBadge extends StatelessWidget {
         style: AppTheme.inter(
           fontSize: 16,
           weight: FontWeight.w600,
-          color: AppTheme.primary.withValues(alpha: 0.65),
+          color: isNight
+              ? Colors.white
+              : AppTheme.primary.withValues(alpha: 0.65),
         ),
       ),
     );
@@ -622,9 +710,14 @@ class _AmPmBadge extends StatelessWidget {
 }
 
 class _ArrowTap extends StatelessWidget {
-  const _ArrowTap({required this.icon, required this.onTap});
+  const _ArrowTap({
+    required this.icon,
+    required this.onTap,
+    this.isNight = false,
+  });
   final IconData icon;
   final VoidCallback onTap;
+  final bool isNight;
 
   @override
   Widget build(BuildContext context) {
@@ -637,7 +730,9 @@ class _ArrowTap extends StatelessWidget {
         child: Icon(
           icon,
           size: 26,
-          color: AppTheme.onSurface.withValues(alpha: 0.45),
+          color: isNight
+              ? Colors.white.withValues(alpha: 0.45)
+              : AppTheme.onSurface.withValues(alpha: 0.3),
         ),
       ),
     );
